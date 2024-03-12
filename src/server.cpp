@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     memset(s, 0, 1000);
     response = response.substr(i, response.find(' ', i)-i);
     if (response == "/") {
-        strcpy(s, "HTTP/1.1 200 OK\r\n\r\n");
+        strcpy(s, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 1");
         printf("%s", s);
         send(client_fd, &s, 1000, 0);
         return 0;
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
     }
     response=response.substr(x+6);
     std::string message = response;
-    response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContest-Length: ";
+    response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
     std::stringstream t;
     t << message.size();
     response += t.str();
