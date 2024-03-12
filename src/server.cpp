@@ -62,36 +62,38 @@ int main(int argc, char **argv) {
 
     char buffer[4000];
     recv(client_fd, &buffer, 4000, 0);
-    std::string response(buffer, strlen(buffer));
+    std::string response(buffer, 4000);
     int i = response.find('/');
     char s[1000];
     memset(s, 0, 1000);
     response = response.substr(i, response.find(' ', i)-i);
     if (response == "/") {
         strcpy(s, "HTTP/1.1 200 OK\r\n\r\n");
-        send(client_fd, s, sizeof(s), 0);
+        printf("%s", s);
+        send(client_fd, &s, 1000, 0);
         return 0;
     }
     
     int x = response.find("/echo");
-    std::cout << x << '\n';
     if (x == -1) {
         strcpy(s, "HTTP/1.1 404 NOT FOUND\r\n\r\n");
-        send(client_fd, s, sizeof(s), 0);
+        send(client_fd, &s, 1000, 0);
         return 0;
     }
     response=response.substr(x+6);
-    std::cout << response << '\n';
     std::string message = response;
     response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContest-Length: ";
     std::stringstream t;
     t << message.size();
     response += t.str();
-    response += "\n\r\n\r";
+    response += "\n\r";
     response += message+"\r\n\r\n";
     std::cout << response;
+    memset(s, 0, 1000);
     strcpy(s, response.c_str());
-    send(client_fd, s, 1000, 0);
+    std::cout << s;
+    send(client_fd, &s, 1000, 0);
+    
     close(server_fd);
     return 0;
 }
