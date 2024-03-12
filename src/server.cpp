@@ -57,10 +57,31 @@ int main(int argc, char **argv) {
            (socklen_t *)&client_addr_len);
     std::cout << "Client connected\n";
 
-    char s[1000];
-    recv(server_fd, &s, 1000, 0);
-    strcpy(s, "HTTP/1.1 200 OK\r\n\r\n");
+    std::string s = "HTTP/1.1 200 OK\r\n\r\n";
     send(client_fd, &s, 1000, 0);
+
+    recv(client_fd, &s, 1000, 0);
+    std::string temp = ""; std::string path;
+    int f = 0;
+    for (int i = 0; i < s.size(); i++) {
+        if (s == "GET ") {
+            s = "";
+            f = 1;
+        }
+        if (f == 1 && s[i] == ' ') {
+            path = temp;
+            break;
+        }
+        temp += s[i];
+    }
+    if (path == "/") {
+        s = "HTTP/1.1 200 OK\r\n\r\n";
+        send(client_fd, &s, 1000, 0);
+    }
+    else {
+        s = "HTTP/1.1 404 Not Found\r\n\r\n";
+        send(client_fd, &s, 1000, 0);
+    }
     close(server_fd);
 
     return 0;
