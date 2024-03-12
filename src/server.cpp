@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
     int i = response.find('/');
     char s[1000];
     memset(s, 0, 1000);
+    std::string fullResponse = response;
     response = response.substr(i, response.find(' ', i)-i);
     if (response == "/") {
         strcpy(s, "HTTP/1.1 200 OK\r\n\r\n");
@@ -75,22 +76,42 @@ int main(int argc, char **argv) {
     }
     
     int x = response.find("/echo");
-    if (x == -1) {
-        strcpy(s, "HTTP/1.1 404 NOT FOUND\r\n\r\n");
+    if (x != -1) {
+        response=response.substr(x+6);
+        std::string message = response;
+        response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
+        std::stringstream t;
+        t << message.size();
+        response += t.str();
+        response += "\r\n\r\n";
+        response += message+"\r\n\r\n";
+        memset(s, 0, 1000);
+        strcpy(s, response.c_str());
         send(client_fd, &s, 1000, 0);
-        return 0;
     }
-    response=response.substr(x+6);
-    std::string message = response;
-    response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
-    std::stringstream t;
-    t << message.size();
-    response += t.str();
-    response += "\r\n\r\n";
-    response += message+"\r\n\r\n";
-    memset(s, 0, 1000);
-    strcpy(s, response.c_str());
+    x = response.find("/user-agent");
+    if (x != -1) {
+        std::string message = response;
+        response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
+        response += std::to_string(message.size());
+        response += "\r\n\r\n";
+
+        int i = fullResponse.find("User-Agent: ");
+        i += strlen("User-Agent: ");
+        std::string user_agent = "";
+        while(fullResponse[i] != '\r') {
+            user_agent += fullResponse[i];
+            i++;
+        }
+        response += user_agent+"\r\n\r\n";
+        memset(s, 0, 1000);
+        strcpy(s, response.c_str());
+        send(client_fd, &s, 1000, 0);
+    }
+    strcpy(s, "HTTP/1.1 404 NOT FOUND\r\n\r\n");
     send(client_fd, &s, 1000, 0);
+    return 0;
+    
     
     close(server_fd);
     return 0;
