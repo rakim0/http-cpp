@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -57,29 +58,25 @@ int main(int argc, char **argv) {
            (socklen_t *)&client_addr_len);
     std::cout << "Client connected\n";
 
-    std::string s = "HTTP/1.1 200 OK\r\n\r\n";
-    send(client_fd, &s, 1000, 0);
-    std::string temp = ""; std::string path;
-    int f = 0;
-    for (int i = 0; i < s.size(); i++) {
-        if (s == "GET ") {
-            s = "";
-            f = 1;
-        }
-        if (f == 1 && s[i] == ' ') {
-            path = temp;
-            break;
-        }
-        temp += s[i];
-    }
-    if (path == "/") {
-        s = "HTTP/1.1 200 OK\r\n\r\n";
+
+    char buffer[4000];
+    recv(client_fd, &buffer, 4000, 0);
+    std::string response(buffer, strlen(buffer));
+    int i = response.find('/');
+    char s[1000];
+    memset(s, 0, 1000);
+    response = response.substr(i,2);
+    if (response == "/ ") {
+        strcpy(s, "HTTP/1.1 200 OK\r\n\r\n");
         send(client_fd, &s, 1000, 0);
+        std::cout << "Accepted\n";
     }
+    
     else {
-        s = "HTTP/1.1 404 Not Found\r\n\r\n";
+        strcpy(s, "HTTP/1.1 404 Not Found\r\n\r\n");
         send(client_fd, &s, 1000, 0);
     }
+
     close(server_fd);
 
     return 0;
