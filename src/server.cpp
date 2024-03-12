@@ -67,7 +67,19 @@ int main(int argc, char **argv) {
     char s[1000];
     memset(s, 0, 1000);
     response = response.substr(i, response.find(' ', i)-i);
-    int x = response.find("/");
+    if (response == "/") {
+        strcpy(s, "HTTP/1.1 200 OK\r\n\r\n");
+        send(client_fd, s, sizeof(s), 0);
+        return 0;
+    }
+    
+    int x = response.find("/echo");
+    std::cout << x << '\n';
+    if (x == -1) {
+        strcpy(s, "HTTP/1.1 404 NOT FOUND\r\n\r\n");
+        send(client_fd, s, sizeof(s), 0);
+        return 0;
+    }
     response=response.substr(x+6);
     std::cout << response << '\n';
     std::string message = response;
