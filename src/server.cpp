@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
     }
     response=response.substr(x+6);
     std::string message = response;
-    response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
+    response="HTTP/1.1 200 OK\r\n\r\n";
     std::stringstream t;
     t << message.size();
     response += t.str();
