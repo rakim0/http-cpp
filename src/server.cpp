@@ -92,10 +92,6 @@ int main(int argc, char **argv) {
     x = response.find("/user-agent");
     if (x != -1) {
         std::string message = response;
-        response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
-        response += std::to_string(message.size());
-        response += "\r\n\r\n";
-
         int i = fullResponse.find("User-Agent: ");
         i += strlen("User-Agent: ");
         std::string user_agent = "";
@@ -103,6 +99,11 @@ int main(int argc, char **argv) {
             user_agent += fullResponse[i];
             i++;
         }
+        response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
+        response += std::to_string(user_agent.size());
+        response += "\r\n\r\n";
+
+        
         response += user_agent+"\r\n\r\n";
         memset(s, 0, 1000);
         strcpy(s, response.c_str());
