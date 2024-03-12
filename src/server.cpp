@@ -88,10 +88,8 @@ int main(int argc, char **argv) {
     response += t.str();
     response += "\n\r\n\r";
     response += message+"\r\n\r\n";
-    std::cout << response;
     memset(s, 0, 1000);
     strcpy(s, response.c_str());
-    std::cout << s;
     send(client_fd, &s, 1000, 0);
     
     close(server_fd);
