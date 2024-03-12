@@ -59,7 +59,6 @@ int main(int argc, char **argv) {
 
     std::string s = "HTTP/1.1 200 OK\r\n\r\n";
     send(client_fd, &s, 1000, 0);
-    recv(client_fd, &s, 1000, 0);
     std::string temp = ""; std::string path;
     int f = 0;
     for (int i = 0; i < s.size(); i++) {
