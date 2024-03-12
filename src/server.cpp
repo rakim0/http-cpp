@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
     std::stringstream t;
     t << message.size();
     response += t.str();
-    response += "\n\r";
+    response += "\n\r\n\r";
     response += message+"\r\n\r\n";
     std::cout << response;
     memset(s, 0, 1000);
