@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <sstream>
 
 int main(int argc, char **argv) {
     // You can use print statements as follows for debugging, they'll be visible
@@ -65,19 +66,20 @@ int main(int argc, char **argv) {
     int i = response.find('/');
     char s[1000];
     memset(s, 0, 1000);
-    response = response.substr(i,2);
-    if (response == "/ ") {
-        strcpy(s, "HTTP/1.1 200 OK\r\n\r\n");
-        send(client_fd, &s, 1000, 0);
-        std::cout << "Accepted\n";
-    }
-    
-    else {
-        strcpy(s, "HTTP/1.1 404 Not Found\r\n\r\n");
-        send(client_fd, &s, 1000, 0);
-    }
-
+    response = response.substr(i, response.find(' ', i)-i);
+    int x = response.find("/");
+    response=response.substr(x+6);
+    std::cout << response << '\n';
+    std::string message = response;
+    response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContest-Length: ";
+    std::stringstream t;
+    t << message.size();
+    response += t.str();
+    response += "\n\r\n\r";
+    response += message+"\r\n\r\n";
+    std::cout << response;
+    strcpy(s, response.c_str());
+    send(client_fd, s, 1000, 0);
     close(server_fd);
-
     return 0;
 }
