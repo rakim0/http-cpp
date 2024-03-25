@@ -4,9 +4,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <sstream>
 #include <string>
 
 int main(int argc, char **argv)
@@ -26,8 +26,7 @@ int main(int argc, char **argv)
     // Since the tester restarts your program quite often, setting REUSE_PORT
     // ensures that we don't run into 'Address already in use' errors
     int reuse = 1;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse)) <
-        0) {
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse)) < 0) {
         std::cerr << "setsockopt failed\n";
         return 1;
     }
@@ -37,8 +36,7 @@ int main(int argc, char **argv)
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(4221);
 
-    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) !=
-        0) {
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
         std::cerr << "Failed to bind to port 4221\n";
         return 1;
     }
@@ -54,62 +52,10 @@ int main(int argc, char **argv)
 
     std::cout << "Waiting for a client to connect...\n";
 
-    int client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
-                           (socklen_t *)&client_addr_len);
+    accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
     std::cout << "Client connected\n";
 
-    char buffer[4000];
-    recv(client_fd, &buffer, 4000, 0);
-    std::string response(buffer, 4000);
-    int i = response.find('/');
-    char s[1000];
-    memset(s, 0, 1000);
-    std::string fullResponse = response;
-    response = response.substr(i, response.find(' ', i) - i);
-    if (response == "/") {
-        strcpy(s, "HTTP/1.1 200 OK\r\n\r\n");
-        printf("%s", s);
-        send(client_fd, &s, 1000, 0);
-        return 0;
-    }
-
-    int x = response.find("/echo");
-    if (x != -1) {
-        response = response.substr(x + 6);
-        std::string message = response;
-        response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
-        std::stringstream t;
-        t << message.size();
-        response += t.str();
-        response += "\r\n\r\n";
-        response += message + "\r\n\r\n";
-        memset(s, 0, 1000);
-        strcpy(s, response.c_str());
-        send(client_fd, &s, 1000, 0);
-    }
-    x = response.find("/user-agent");
-    if (x != -1) {
-        std::string message = response;
-        int i = fullResponse.find("User-Agent: ");
-        i += strlen("User-Agent: ");
-        std::string user_agent = "";
-        while (fullResponse[i] != '\r') {
-            user_agent += fullResponse[i];
-            i++;
-        }
-        response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
-        response += std::to_string(user_agent.size());
-        response += "\r\n\r\n";
-
-        response += user_agent + "\r\n\r\n";
-        memset(s, 0, 1000);
-        strcpy(s, response.c_str());
-        send(client_fd, &s, 1000, 0);
-    }
-    strcpy(s, "HTTP/1.1 404 NOT FOUND\r\n\r\n");
-    send(client_fd, &s, 1000, 0);
-    return 0;
-
     close(server_fd);
+
     return 0;
 }
