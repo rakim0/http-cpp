@@ -4,14 +4,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <algorithm>
-#include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <string>
 #include <sstream>
+#include <string>
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     // You can use print statements as follows for debugging, they'll be visible
     // when running tests.
     std::cout << "Logs from your program will appear here!\n";
@@ -56,9 +55,8 @@ int main(int argc, char **argv) {
     std::cout << "Waiting for a client to connect...\n";
 
     int client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
-           (socklen_t *)&client_addr_len);
+                           (socklen_t *)&client_addr_len);
     std::cout << "Client connected\n";
-
 
     char buffer[4000];
     recv(client_fd, &buffer, 4000, 0);
@@ -67,24 +65,24 @@ int main(int argc, char **argv) {
     char s[1000];
     memset(s, 0, 1000);
     std::string fullResponse = response;
-    response = response.substr(i, response.find(' ', i)-i);
+    response = response.substr(i, response.find(' ', i) - i);
     if (response == "/") {
         strcpy(s, "HTTP/1.1 200 OK\r\n\r\n");
         printf("%s", s);
         send(client_fd, &s, 1000, 0);
         return 0;
     }
-    
+
     int x = response.find("/echo");
     if (x != -1) {
-        response=response.substr(x+6);
+        response = response.substr(x + 6);
         std::string message = response;
-        response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
+        response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
         std::stringstream t;
         t << message.size();
         response += t.str();
         response += "\r\n\r\n";
-        response += message+"\r\n\r\n";
+        response += message + "\r\n\r\n";
         memset(s, 0, 1000);
         strcpy(s, response.c_str());
         send(client_fd, &s, 1000, 0);
@@ -95,16 +93,15 @@ int main(int argc, char **argv) {
         int i = fullResponse.find("User-Agent: ");
         i += strlen("User-Agent: ");
         std::string user_agent = "";
-        while(fullResponse[i] != '\r') {
+        while (fullResponse[i] != '\r') {
             user_agent += fullResponse[i];
             i++;
         }
-        response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
+        response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ";
         response += std::to_string(user_agent.size());
         response += "\r\n\r\n";
 
-        
-        response += user_agent+"\r\n\r\n";
+        response += user_agent + "\r\n\r\n";
         memset(s, 0, 1000);
         strcpy(s, response.c_str());
         send(client_fd, &s, 1000, 0);
@@ -112,8 +109,7 @@ int main(int argc, char **argv) {
     strcpy(s, "HTTP/1.1 404 NOT FOUND\r\n\r\n");
     send(client_fd, &s, 1000, 0);
     return 0;
-    
-    
+
     close(server_fd);
     return 0;
 }
