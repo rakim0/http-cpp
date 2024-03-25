@@ -4,12 +4,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
 #include <vector>
 
-void client(int client_fd)
+void client(int client_fd, std::string directory)
 {
     char messageBuffer[1024];
     int bytes_read = 0;
@@ -36,10 +38,12 @@ void client(int client_fd)
     }
     // std::cout << path << '\n';
     int findEcho = request.find("echo");
-
+    int findFile = request.find("/files/");
     int findUserAgent = request.find("User-Agent: ");
+
     std::string userAgent;
     std::string arg;
+    std::string filename;
 
     if (path == "/") {
         server_send = send(client_fd, httpOk.c_str(), httpOk.size(), 0);
@@ -62,7 +66,7 @@ void client(int client_fd)
                    "Content-Type: text/plain\r\n" +
                    "Content-Length: " + std::to_string(arg.length()) +
                    "\r\n\r\n" + arg;
-        std::cout << response << '\n';
+        // std::cout << response << '\n';
         server_send = send(client_fd, response.c_str(), response.size(), 0);
     }
     else if (request.find("GET /user-agent") != std::string::npos) {
@@ -76,10 +80,40 @@ void client(int client_fd)
                        "Content-Type: text/plain\r\n" + "Content-Length: " +
                        std::to_string(userAgent.length()) + "\r\n\r\n" +
                        userAgent;
-            std::cout << response << '\n';
+            // std::cout << response << '\n';
             server_send =
                 send(client_fd, response.c_str(), response.size(), 0);
         }
+    }
+
+    else if (findFile != std::string::npos) {
+        int fileStart = findFile + 7;
+        int fileEnd = request.find(' ', findFile);
+        filename = request.substr(fileStart, fileEnd - fileStart);
+        std::cout << filename << '\n';
+        std::string fullPath = directory + '/' + filename;
+
+        std::ifstream file;
+        file.open(fullPath, std::ios::in | std::ios::binary);
+        if (!file.is_open()) {
+            server_send = send(client_fd, httpNo.c_str(), httpNo.size(), 0);
+            if (server_send == -1) {
+                std::cerr << "Server failed to send buffer!!\n";
+                close(client_fd);
+                return;
+            }
+        }
+
+        const auto sz = std::filesystem::file_size(fullPath);
+        std::string fileContent(sz, '\0');
+        file.read(fileContent.data(), sz);
+        std::string response = "";
+        response = response + "HTTP/1.1 200 OK\r\n" +
+                   "Content-Type: application/octet-stream\r\n" +
+                   "Content-Length: " + std::to_string(fileContent.length()) +
+                   "\r\n\r\n" + fileContent;
+        // std::cout << response << '\n';
+        server_send = send(client_fd, response.c_str(), response.size(), 0);
     }
 
     else {
@@ -134,21 +168,25 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    std::string directory = "";
+    if (argc == 3) {
+        directory = argv[2];
+    }
+    std::cout << directory << '\n';
+
     std::vector<std::thread> thread_list;
     struct sockaddr_in client_addr;
     int client_addr_len = sizeof(client_addr);
-
-    std::cout << "Waiting for a client to connect...\n";
 
     while (1) {
         int client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
                                (socklen_t *)&client_addr_len);
         if (client_fd < 0) {
-            std::cerr << "client failed to connect\n";
+            // std::cerr << "client failed to connect\n";
             return 1;
         }
-        std::cout << "Client connected\n";
-        thread_list.emplace_back(client, client_fd);
+        // std::cout << "Client connected\n";
+        thread_list.emplace_back(client, client_fd, directory);
     }
     for (auto &thread : thread_list) {
         thread.join();
