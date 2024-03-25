@@ -6,6 +6,93 @@
 
 #include <iostream>
 #include <string>
+#include <thread>
+#include <vector>
+
+void client(int client_fd)
+{
+    char messageBuffer[1024];
+    int bytes_read = 0;
+
+    if ((bytes_read = read(client_fd, &messageBuffer, 1024)) < 0) {
+        std::cerr << "Failed to read from client\n";
+        close(client_fd);
+        return;
+    }
+    std::string httpOk = "HTTP/1.1 200 OK\r\n\r\n";
+    std::string httpNo = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+    int server_send = 0;
+
+    messageBuffer[bytes_read] = '\0';
+    std::string path;
+    std::string request(messageBuffer);
+    int methodEnd = request.find(' ');
+    if (methodEnd != std::string::npos) {
+        int pathStart = methodEnd + 1;
+        int pathEnd = request.find(' ', pathStart);
+        if (pathEnd != std::string::npos) {
+            path = request.substr(pathStart, pathEnd - pathStart);
+        }
+    }
+    // std::cout << path << '\n';
+    int findEcho = request.find("echo");
+
+    int findUserAgent = request.find("User-Agent: ");
+    std::string userAgent;
+    std::string arg;
+
+    if (path == "/") {
+        server_send = send(client_fd, httpOk.c_str(), httpOk.size(), 0);
+        if (server_send == -1) {
+            std::cerr << "Server failed to send buffer!!\n";
+            close(client_fd);
+            return;
+        }
+    }
+    else if (findEcho != std::string::npos) {
+        if (findEcho != std::string::npos) {
+            int argStart = findEcho;
+            int argEnd = request.find(' ', findEcho);
+            if (argEnd != std::string::npos) {
+                arg = request.substr(argStart + 5, argEnd - argStart - 5);
+            }
+        }
+        std::string response = "";
+        response = response + "HTTP/1.1 200 OK\r\n" +
+                   "Content-Type: text/plain\r\n" +
+                   "Content-Length: " + std::to_string(arg.length()) +
+                   "\r\n\r\n" + arg;
+        std::cout << response << '\n';
+        server_send = send(client_fd, response.c_str(), response.size(), 0);
+    }
+    else if (request.find("GET /user-agent") != std::string::npos) {
+        if (findUserAgent != std::string::npos) {
+            int userAgentEnd = request.find("\r\n", findUserAgent + 12);
+            userAgent = request.substr(findUserAgent + 12,
+                                       userAgentEnd - (findUserAgent + 12));
+
+            std::string response = "";
+            response = response + "HTTP/1.1 200 OK\r\n" +
+                       "Content-Type: text/plain\r\n" + "Content-Length: " +
+                       std::to_string(userAgent.length()) + "\r\n\r\n" +
+                       userAgent;
+            std::cout << response << '\n';
+            server_send =
+                send(client_fd, response.c_str(), response.size(), 0);
+        }
+    }
+
+    else {
+        server_send = send(client_fd, httpNo.c_str(), httpNo.size(), 0);
+        if (server_send == -1) {
+            std::cerr << "Server failed to send buffer!!\n";
+            close(client_fd);
+            return;
+        }
+    }
+    close(client_fd);
+    return;
+}
 
 int main(int argc, char **argv)
 {
@@ -47,101 +134,24 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    std::vector<std::thread> thread_list;
     struct sockaddr_in client_addr;
     int client_addr_len = sizeof(client_addr);
 
     std::cout << "Waiting for a client to connect...\n";
 
-    int client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
-                           (socklen_t *)&client_addr_len);
-    if (client_fd < 0) {
-        std::cerr << "client failed to connect\n";
-        return 1;
-    }
-    std::cout << "Client connected\n";
-
-    char messageBuffer[1024];
-    int bytes_read = 0;
-
-    if ((bytes_read = read(client_fd, &messageBuffer, 1024)) < 0) {
-        std::cerr << "Failed to read from client\n";
-        close(client_fd);
-        return 1;
-    }
-    std::string httpOk = "HTTP/1.1 200 OK\r\n\r\n";
-    std::string httpNo = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
-    int server_send = 0;
-
-    messageBuffer[bytes_read] = '\0';
-    std::string path;
-    std::string request(messageBuffer);
-    int methodEnd = request.find(' ');
-    if (methodEnd != std::string::npos) {
-        int pathStart = methodEnd + 1;
-        int pathEnd = request.find(' ', pathStart);
-        if (pathEnd != std::string::npos) {
-            path = request.substr(pathStart, pathEnd - pathStart);
+    while (1) {
+        int client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
+                               (socklen_t *)&client_addr_len);
+        if (client_fd < 0) {
+            std::cerr << "client failed to connect\n";
+            return 1;
         }
+        std::cout << "Client connected\n";
+        thread_list.emplace_back(client, client_fd);
     }
-    // std::cout << path << '\n';
-    int findEcho = request.find("echo");
-
-    int findUserAgent = request.find("User-Agent: ");
-    std::string userAgent;
-    std::string arg;
-
-    if (path == "/") {
-        server_send = send(client_fd, httpOk.c_str(), httpOk.size(), 0);
-        if (server_send == -1) {
-            std::cerr << "Server failed to send buffer!!\n";
-            close(server_fd);
-            close(client_fd);
-            return -1;
-        }
+    for (auto &thread : thread_list) {
+        thread.join();
     }
-    else if (findEcho != std::string::npos) {
-        if (findEcho != std::string::npos) {
-            int argStart = findEcho;
-            int argEnd = request.find(' ', findEcho);
-            if (argEnd != std::string::npos) {
-                arg = request.substr(argStart + 5, argEnd - argStart - 5);
-            }
-        }
-        std::string response = "";
-        response = response + "HTTP/1.1 200 OK\r\n" +
-                   "Content-Type: text/plain\r\n" +
-                   "Content-Length: " + std::to_string(arg.length()) +
-                   "\r\n\r\n" + arg;
-        std::cout << response << '\n';
-        server_send = send(client_fd, response.c_str(), response.size(), 0);
-    }
-    else if (request.find("GET /user-agent") != std::string::npos) {
-        if (findUserAgent != std::string::npos) {
-            int userAgentEnd = request.find("\r\n", findUserAgent + 12);
-            userAgent = request.substr(findUserAgent + 12,
-                                       userAgentEnd - (findUserAgent + 12));
-
-            std::string response = "";
-            response = response + "HTTP/1.1 200 OK\r\n" +
-                       "Content-Type: text/plain\r\n" + "Content-Length: " +
-                       std::to_string(userAgent.length()) + "\r\n\r\n" +
-                       userAgent;
-            std::cout << response << '\n';
-            server_send =
-                send(client_fd, response.c_str(), response.size(), 0);
-        }
-    }
-
-    else {
-        server_send = send(client_fd, httpNo.c_str(), httpNo.size(), 0);
-        if (server_send == -1) {
-            std::cerr << "Server failed to send buffer!!\n";
-            close(server_fd);
-            close(client_fd);
-            return -1;
-        }
-    }
-    close(client_fd);
     close(server_fd);
-    return 0;
 }
