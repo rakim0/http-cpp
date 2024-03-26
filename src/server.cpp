@@ -38,7 +38,8 @@ void client(int client_fd, std::string directory)
     }
     // std::cout << path << '\n';
     int findEcho = request.find("echo");
-    int findFile = request.find("/files/");
+    int findFile = request.find("GET /files/");
+    int postFile = request.find("POST /files/");
     int findUserAgent = request.find("User-Agent: ");
 
     std::string userAgent;
@@ -87,11 +88,11 @@ void client(int client_fd, std::string directory)
     }
 
     else if (findFile != std::string::npos) {
-        int fileStart = findFile + 7;
-        int fileEnd = request.find(' ', findFile);
+        int fileStart = findFile + 11;
+        int fileEnd = request.find(' ', fileStart);
         filename = request.substr(fileStart, fileEnd - fileStart);
-        std::cout << filename << '\n';
         std::string fullPath = directory + '/' + filename;
+        std::cout << fullPath << '\n';
 
         std::ifstream file;
         file.open(fullPath, std::ios::in | std::ios::binary);
@@ -112,6 +113,27 @@ void client(int client_fd, std::string directory)
                    "Content-Type: application/octet-stream\r\n" +
                    "Content-Length: " + std::to_string(fileContent.length()) +
                    "\r\n\r\n" + fileContent;
+        // std::cout << response << '\n';
+        server_send = send(client_fd, response.c_str(), response.size(), 0);
+    }
+
+    else if (postFile != std::string::npos) {
+        int fileStart = postFile + 12;
+        int fileEnd = request.find(' ', fileStart);
+        filename = request.substr(fileStart, fileEnd - fileStart);
+        std::string fullPath = directory + '/' + filename;
+        std::cout << fullPath << '\n';
+
+        int bodyStart = request.find("\r\n\r\n");
+        std::string body = request.substr(bodyStart + 4);
+        std::cout << body << '\n';
+        std::ofstream outf{fullPath};
+        if (!outf) {
+            std::cerr << "The file couldn't be made on the server!!";
+            return;
+        }
+        outf << body;
+        std::string response = "HTTP/1.1 201 Created\r\n\r\n";
         // std::cout << response << '\n';
         server_send = send(client_fd, response.c_str(), response.size(), 0);
     }
