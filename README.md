@@ -1,3 +1,5 @@
+# Completed!
+
 [![progress-banner](https://backend.codecrafters.io/progress/http-server/cbaadd53-60f0-47c5-a5f4-b49703ed0f75)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
 
 This is a starting point for C++ solutions to the
